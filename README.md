@@ -1,6 +1,6 @@
 # retrovibe
 
-Code like it was 1996!
+The vibe of coding in 1996!
 
 Rémino Rem <https://remino.net>, 2025, ISC licence.
 
