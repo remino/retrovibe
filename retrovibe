@@ -71,7 +71,7 @@ COMMANDS:
 		Delete all setup files.
 
 	setup
-		Download MS-DOS 5.0 & 6.22 WinWorld, if not downloaded already, verify
+		Download MS-DOS 5.0 & 6.22 from WinWorld, if not downloaded already, verify
 		checksum, then extract files.
 
 	help
