@@ -2,6 +2,6 @@
 
 Coding in 1994 was a vibe.
 
-© 2025 Rémino Rem <https://remino.net>. ISC licence.
+Rémino Rem <https://remino.net>, 2025, ISC licence.
 
 Clone this repo and run `./retrovibe help` for usage details.
