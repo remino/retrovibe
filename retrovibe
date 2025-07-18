@@ -20,7 +20,9 @@ retrovibe_main() {
 	SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
 	SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 
-	IMAGES_DIR="$SCRIPT_DIR/images"
+	SETUP_DIR="$SCRIPT_DIR/setup"
+	VOL_A="$SCRIPT_DIR/a"
+	VOL_B="$SCRIPT_DIR/b"
 
 	while getopts hv OPT; do
 		case $OPT in
@@ -39,12 +41,7 @@ retrovibe_main() {
 	[ -z "$CMD" ] && CMD="help"
 
 	case "$CMD" in
-		cp) CMD=copy ;;
-		dl) CMD=download ;;
-	esac
-
-	case "$CMD" in
-		clean | copy | download | image | format | help | setup | start | version) "${SCRIPT_NAME}_$CMD" "$@" ;;
+		clean | help | setup | start | version) "${SCRIPT_NAME}_$CMD" "$@" ;;
 		*) _invalid_cmd ;;
 	esac
 
@@ -52,54 +49,7 @@ retrovibe_main() {
 }
 
 retrovibe_clean() {
-	for i in startup shell suppl utility files; do
-		rm -fr "$IMAGES_DIR/$i.img"
-	done
-}
-
-retrovibe_copy() {
-	_require_root
-	_require hexdump
-
-	[ $# -lt 2 ] && _fatal $E_ARGS "Arguments missing."
-
-	local image="$1"
-	local device="$2"
-
-	[ ! -f "$image" ] && _fatal $E_MISSING_FILE "Does not exist or is not a file: $image"
-	[ ! -e "$device" ] && _fatal $E_MISSING_FILE "Device not found: $device"
-
-	_echo "$image => $device"
-	dd if="$image" of="$device" bs=64k status=progress
-	sync
-	dd if="$device" bs=64k count=2880 status=progress | hexdump -C | head
-}
-
-retrovibe_download() {
-	_require 7z curl sha512sum
-
-	_mkimgdir
-	_cd "$IMAGES_DIR"
-
-	local pkg=msdos5.7z
-
-	if [ ! -f "$pkg" ]; then
-		curl -sL https://winworldpc.com/download/49c3a35d-1245-0911-c3a7-c29d25525400/from/c3ae6ee2-8099-713d-3411-c3a6e280947e > "$pkg"
-	fi
-
-	sha512sum -c "$SCRIPT_DIR/sha512sum"
-
-	7z e "$pkg"
-}
-
-retrovibe_image() {
-	_mkfloppy "$1" "$2"
-}
-
-retrovibe_format() {
-	for i in startup shell suppl utility files; do
-		_mkfloppy "$IMAGES_DIR/$i.img"
-	done
+	[ -d "$SETUP_DIR" ] && rm -fr "$SETUP_DIR"
 }
 
 retrovibe_help() {
@@ -108,48 +58,27 @@ $SCRIPT_NAME $VERSION
 
 USAGE: $SCRIPT_INV [<options>] <command> [<args>]
 
-Code like it was 1996!
+Code like it was 1994!
 
-Set up and start an old 486 PC with 2 MiB of RAM to run MS-DOS 5.0 in QEMU to
-give you a feel of retro vibe coding with QBASIC and MS-DOS Editor.
+Manages a little PC VM with floppy drives using DOSBox-X that includes the 
+Editor and QBasic from MS-DOS 6.22.
+
+Requires 7z, curl, dosbox-x, mcopy, sha512sum, and unix2dos.
 
 COMMANDS:
 
 	clean
-		Delete all local image files made by 'format'.
+		Delete all setup files.
 
-	copy <disc.img> <device>
-		Copy floppy disc image file <disc.img> to <device> physical disc. Must run
-		as root.
-
-	cp
-		Alias of 'copy'.
-
-	dl
-		Alias of 'download'.
-
-	download
-		Download "Microsoft MS-DOS 5.00 (3.5-720k)" from WinWorld, if not downloaded
-		already, verify checksum, and extract the files.
-
-	image <disc.img> [<label>]
-		Generate a floppy disc image in <disc.img> with <label> volume label.
-		If <label> is not specified, basename of <disc.img> will be used.
-
-	format
-		Format disc images to be used by PC VM if they do not exist yet.
+	setup
+		Download MS-DOS 5.0 & 6.22 WinWorld, if not downloaded already, verify
+		checksum, then extract files.
 
 	help
 		Show this help screen.
 
-	setup
-		Start PC VM with QEMU to set up MS-DOS. Will also run 'format'.
-
-	start [<filesvol>]
-		Start PC VM in MS-DOS prompt with 'system.img' as A drive and <filesvol> as
-		B. Must run as root if using a physical device. If <filesvol> is not set,
-		'files.img' in images directory will be used.
-		(Requires physical floppy discs to be set up with MS-DOS 5 first.)
+	start
+		Start DOSBox-X with A drive. (Requires 'setup' first.)
 
 	version
 		Show script name and version number.
@@ -163,35 +92,46 @@ USAGE
 }
 
 retrovibe_setup() {
-	for i in $(seq 1 3); do
-		[ -f "${IMAGES_DIR}/Disk0$i.img" ] && continue
-		_fatal $E_MISSING_FILE "Missing setup MS-DOS 5.0 image files. See README."
+	_require 7z curl dosbox-x mcopy sha512sum unix2dos
+
+	for i in "$SETUP_DIR" "$VOL_A" "$VOL_B"; do
+		_echo "$i"
+		[ ! -d "$i" ] && mkdir -p "$i"
 	done
 
-	retrovibe_format
+	_cd "$SETUP_DIR"
 
-	_qemu \
-		-drive format=raw,file="$IMAGES_DIR/Disk01.img",if=floppy,readonly=on,index=0 \
-		-drive format=raw,file="$IMAGES_DIR/startup.img",if=floppy,index=1 \
-		"$@" \
-		;
+	_downloads | while read -r url file; do
+		if [ ! -f "$file" ]; then
+			curl -sL "$url" > "$file"
+		fi
+	done
+
+	sha512sum -c "$SCRIPT_DIR/sha512sum"
+
+	_extracted_dirs | while read -r dir name; do
+		[ -d "$dir" ] && rm -fr "$dir"
+		7z x -y "$dir.7z"
+		mv "$name" "$dir"
+	done
+
+	_extract_files | while read -r disk file; do
+		mcopy -n -i "$disk" ::/"$file" "$file"
+	done
+
+	_conf_expand > expand.conf
+	dosbox-x -conf expand.conf -silent
+	rm EXPAND.EXE
+
+	_readme_txt | unix2dos > README.TXT
+
+	mv -v *.BAS *.COM *.HLP *.EXE *.TXT "$VOL_A"
 }
 
 retrovibe_start() {
-	local device=""
-
-	[ $# -gt 0 ] && device="$1" && shift
-	[ -z "$device" ] && device="$IMAGES_DIR/files.img"
-
-	_is_device "$device" && _require_root
-
-	_qemu \
-		-rtc clock=vm \
-		-icount shift=4 \
-		-drive format=raw,file="$IMAGES_DIR/startup.img",if=floppy,readonly=on,index=0 \
-		-drive format=raw,file="$device",if=floppy,index=1 \
-		"$@" \
-		;
+	_require dosbox-x
+	_cd "$SCRIPT_DIR"
+	dosbox-x
 }
 
 retrovibe_version() {
@@ -201,6 +141,33 @@ retrovibe_version() {
 _cd() {
 	[ $# -lt 1 ] && _fatal $E_ARGS "Missing argument for _cd."
 	cd "$1" || _fatal $E_CD_FAILED "Cannot change info directory: $1"
+}
+
+_conf_expand() {
+	cat << CONF
+[autoexec]
+MOUNT C .
+C:
+EXPAND EDIT.HL_ EDIT.HLP
+EXPAND QBASIC.HL_ QBASIC.HLP
+EXPAND MONEY.BA_ MONEY.BAS
+EXPAND GORILLA.BA_ GORILLA.BAS
+EXPAND NIBBLES.BA_ NIBBLES.BAS
+EXPAND REMLINE.BA_ REMLINE.BAS
+DEL EDIT.HL_
+DEL QBASIC.HL_
+DEL MONEY.BA_
+DEL GORILLA.BA_
+DEL NIBBLES.BA_
+DEL REMLINE.BA_
+CONF
+}
+
+_downloads() {
+	cat << DL
+https://winworldpc.com/download/49c3a35d-1245-0911-c3a7-c29d25525400/from/c3ae6ee2-8099-713d-3411-c3a6e280947e msdos500.7z
+https://winworldpc.com/download/c38fc38d-68c2-bbe2-80a6-4b11c3a4c2ac/from/c3ae6ee2-8099-713d-3411-c3a6e280947e msdos622.7z
+DL
 }
 
 _echo() {
@@ -214,6 +181,27 @@ _error() {
 _exit() {
 	exit_code=$?
 	exit "$exit_code"
+}
+
+_extract_files() {
+	cat << FILES
+msdos500/Disk02.img MONEY.BA_
+msdos500/Disk03.img GORILLA.BA_
+msdos500/Disk03.img NIBBLES.BA_
+msdos500/Disk03.img REMLINE.BA_
+msdos622/Disk1.img EDIT.COM
+msdos622/Disk1.img QBASIC.EXE
+msdos622/Disk2.img EDIT.HL_
+msdos622/Disk2.img QBASIC.HL_
+msdos622/Suppdisk.img EXPAND.EXE
+FILES
+}
+
+_extracted_dirs() {
+	cat << DIRS
+msdos500 Microsoft MS-DOS 5.00 (3.5-720k)
+msdos622 Microsoft MS-DOS 6.22 Plus Enhanced Tools (3.5)
+DIRS
 }
 
 _fatal() {
@@ -237,48 +225,6 @@ _invalid_opt() {
 	exit "$E_ARGS"
 }
 
-_is_device() {
-	[ -b "$1" ] || [ -c "$1" ]
-}
-
-_mkfloppy() {
-	_require mformat
-
-	local image=
-	local label=
-
-	[ $# -gt 0 ] && image="$1"
-	[ $# -gt 1 ] && label="$2"
-
-	[ -z "$label" ] && label="$(basename "$image" .img | _to_uppercase)"
-
-	[ -f "$image" ] && _error "Already exists: $image" && return
-
-	_echo "$image: $label"
-
-	dd if=/dev/zero of="$image" bs=512 count=2880
-	mformat -f 1440 -C -v "$label" -i "$image" ::
-}
-
-_mkimgdir() {
-	mkdir -p "$IMAGES_DIR"
-}
-
-_qemu() {
-	_require qemu-system-i386
-
-	qemu-system-i386 \
-		-cpu 486 \
-		-m 2M \
-		-boot a \
-		-display cocoa,full-grab=off,full-screen=on,zoom-to-fit=on \
-		-monitor stdio \
-		-vga std \
-		-net none \
-		"$@" \
-		;
-}
-
 _require() {
 	missing_bin=0
 
@@ -300,9 +246,25 @@ _require_root() {
 	fi
 }
 
-_to_uppercase() {
-	_require tr
-	tr '[:lower:]' '[:upper:]'
+_readme_txt() {
+	cat << BAT
+ ____  _____ _____ ____   _____     _____ ____  _____ 
+|  _ \| ____|_   _|  _ \ / _ \ \   / /_ _| __ )| ____|
+| |_) |  _|   | | | |_) | | | \ \ / / | ||  _ \|  _|  
+|  _ <| |___  | | |  _ <| |_| |\ V /  | || |_) | |___ 
+|_| \_\_____| |_| |_| \_\\\___/  \_/  |___|____/|_____|
+                                                      
+Coding in 1994 was a vibe.
+https://github.com/remino/retrovibe
+
+EDIT     Start MS-DOS Editor.
+QBASIC   Start MS-DOS QBasic.
+
+DIR      List files.
+HELP     Show help.
+EXIT     Exit DOSBox-X.
+
+BAT
 }
 
 retrovibe_main "$@"

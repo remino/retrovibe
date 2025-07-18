@@ -1,6 +1,6 @@
 # retrovibe
 
-The vibe of coding in 1996!
+Coding in 1994 was a vibe.
 
 Rémino Rem <https://remino.net>, 2025, ISC licence.
 
