@@ -131,7 +131,7 @@ retrovibe_setup() {
 retrovibe_start() {
 	_require dosbox-x
 	_cd "$SCRIPT_DIR"
-	dosbox-x
+	dosbox-x "$@"
 }
 
 retrovibe_version() {
