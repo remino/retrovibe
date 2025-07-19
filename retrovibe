@@ -63,7 +63,7 @@ Code like it was 1994!
 Manages a little PC VM with two floppy drives using DOSBox-X that includes the 
 Editor and QBasic from MS-DOS 6.22.
 
-Requires 7z, curl, dosbox-x, mcopy, sha512sum, and unix2dos.
+Requires 7z, cabextract, curl, dosbox-x, mcopy, sha512sum, and unix2dos.
 
 COMMANDS:
 
@@ -92,7 +92,7 @@ USAGE
 }
 
 retrovibe_setup() {
-	_require 7z curl dosbox-x mcopy sha512sum unix2dos
+	_require 7z cabextract curl dosbox-x mcopy sha512sum unix2dos
 
 	for i in "$SETUP_DIR" "$VOL_A" "$VOL_B"; do
 		_echo "$i"
