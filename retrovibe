@@ -314,7 +314,7 @@ Coding in 1994 was a vibe.
 https://github.com/remino/retrovibe
 
 EDIT         Start MS-DOS Editor from MS-DOS 5.
-WIN95/EDIT   Start MS-DOS Editor from Windows 95.
+WIN95\EDIT   Start MS-DOS Editor from Windows 95.
 Z:\DOS\EDIT  Start DOSBox-X Program Editor Light.
 
 EDLIN        Start Edlin.
