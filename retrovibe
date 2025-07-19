@@ -103,7 +103,7 @@ retrovibe_setup() {
 
 	_downloads | while read -r url file; do
 		if [ ! -f "$file" ]; then
-			curl -sL "$url" > "$file"
+			curl -L "$url" > "$file"
 		fi
 	done
 
