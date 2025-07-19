@@ -123,9 +123,21 @@ retrovibe_setup() {
 	dosbox-x -conf expand.conf -silent
 	rm EXPAND.EXE
 
+	cabout="$SETUP_DIR/cab"
+	[ ! -d "$cabout" ] && mkdir "$cabout"
+
+	cabextract -d "$cabout" WIN95_02.CAB
+	_cabextract_files | while read -r file outpath; do
+		dir="$SETUP_DIR/$(dirname "$outpath")"
+		[ ! -d "$dir" ] && mkdir -p "$dir"
+		mv "$cabout/$file" "$outpath"
+	done
+
 	_readme_txt | unix2dos > README.TXT
 
 	mv -v *.BAS *.COM *.HLP *.EXE *.TXT "$VOL_A"
+	[ ! -d "$VOL_A/WIN95" ] && mkdir -p "$VOL_A/WIN95"
+	mv -v WIN95/*.COM WIN95/*.HLP "$VOL_A/WIN95"
 }
 
 retrovibe_start() {
@@ -136,6 +148,13 @@ retrovibe_start() {
 
 retrovibe_version() {
 	_echo "$SCRIPT_NAME $VERSION"
+}
+
+_cabextract_files() {
+	cat << FILES
+EDIT.COM WIN95/EDIT.COM
+EDIT.HLP WIN95/EDIT.HLP
+FILES
 }
 
 _cd() {
@@ -175,6 +194,7 @@ _downloads() {
 	cat << DL
 https://winworldpc.com/download/49c3a35d-1245-0911-c3a7-c29d25525400/from/c3ae6ee2-8099-713d-3411-c3a6e280947e msdos500.7z
 https://winworldpc.com/download/c38fc38d-68c2-bbe2-80a6-4b11c3a4c2ac/from/c3ae6ee2-8099-713d-3411-c3a6e280947e msdos622.7z
+https://winworldpc.com/download/4120c593-e280-9818-c39a-11c3a4e284a2/from/c3ae6ee2-8099-713d-3411-c3a6e280947e win95.7z
 DL
 }
 
@@ -206,6 +226,29 @@ msdos622/Disk1.img QBASIC.EXE
 msdos622/Disk2.img EDIT.HL_
 msdos622/Disk2.img QBASIC.HL_
 msdos622/Suppdisk.img EXPAND.EXE
+win95/Disk01.img PRECOPY1.CAB
+win95/Disk02.img PRECOPY2.CAB
+win95/Disk02.img WIN95_02.CAB
+win95/Disk03.img WIN95_03.CAB
+win95/Disk04.img WIN95_04.CAB
+win95/Disk05.img WIN95_05.CAB
+win95/Disk06.img WIN95_06.CAB
+win95/Disk07.img WIN95_07.CAB
+win95/Disk08.img WIN95_08.CAB
+win95/Disk09.img WIN95_09.CAB
+win95/Disk10.img WIN95_10.CAB
+win95/Disk11.img WIN95_11.CAB
+win95/Disk12.img WIN95_12.CAB
+win95/Disk13.img WIN95_13.CAB
+win95/Disk14.img WIN95_14.CAB
+win95/Disk15.img WIN95_15.CAB
+win95/Disk16.img WIN95_16.CAB
+win95/Disk17.img WIN95_17.CAB
+win95/Disk18.img WIN95_18.CAB
+win95/Disk19.img WIN95_19.CAB
+win95/Disk20.img WIN95_20.CAB
+win95/Disk21.img WIN95_21.CAB
+win95/Disk22.img WIN95_22.CAB
 FILES
 }
 
@@ -213,6 +256,7 @@ _extracted_dirs() {
 	cat << DIRS
 msdos500 Microsoft MS-DOS 5.00 (3.5-720k)
 msdos622 Microsoft MS-DOS 6.22 Plus Enhanced Tools (3.5)
+win95    Microsoft Windows 95B (4.00.1111.osr2) (3.5)
 DIRS
 }
 
@@ -269,15 +313,17 @@ _readme_txt() {
 Coding in 1994 was a vibe.
 https://github.com/remino/retrovibe
 
-EDIT     Start MS-DOS Editor.
+EDIT         Start MS-DOS Editor from MS-DOS 5.
+WIN95/EDIT   Start MS-DOS Editor from Windows 95.
+Z:\DOS\EDIT  Start DOSBox-X Program Editor Light.
 
-EDLIN    Start Edlin.
-DOSSHELL Start MS-DOS Shell.
-QBASIC   Start MS-DOS QBasic.
+EDLIN        Start Edlin.
+DOSSHELL     Start MS-DOS Shell.
+QBASIC       Start MS-DOS QBasic.
 
-DIR      List files.
-HELP     Show help.
-EXIT     Exit DOSBox-X.
+DIR          List files.
+HELP         Show help.
+EXIT         Exit DOSBox-X.
 
 BAT
 }
